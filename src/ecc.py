@@ -62,6 +62,51 @@ class FieldElement:
         num = (self.num * num) % self.prime
         return self.__class__(num, self.prime)
 
+class Point:
+    """楕円曲線上の点
+    """
+
+    def __init__(self, x, y, a, b):
+        self.a = a
+        self.b = b
+        self.x = x
+        self.y = y
+        if self.x is None and self.y is None:
+            return
+        if self.y ** 2 != self.x ** 3 + a * x + b:
+            raise ValueError(f'({x}, {y}) is not on the curve')
+
+    def __repr__(self):
+        if self.x is None:
+            return 'Point(infinity)'
+        else:
+            return f'Point({self.x},{self.y})_{self.a}_{self.b}'
+
+    def __eq__(self, other):
+        return self.x == other.x and self.y == other.y \
+                and self.a == other.a and self.b == other.b
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    def __add__(self, other):
+        if self.a != other.a or self.b != other.b:
+            raise TypeError(f'Points {self}, {other} are not on the same curve')
+
+        if self.x is None:
+            return other
+
+        if other.x is None:
+            return self
+
+        if self.x == other.x and self.y != other.y:
+            return self.__class__(None, None, self.a, self.b)
+
+        if self.x != other.x:
+            s = (other.y - self.y) / (other.x - self.x)
+            x = s ** 2 - self.x - other.x
+            y = s * (self.x - x) - self.y
+            return self.__class__(x, y, self.a, self.b)
 
 class TestFieldElement(unittest.TestCase):
     """test class of FieldElement
@@ -112,6 +157,39 @@ class TestFieldElement(unittest.TestCase):
         b = FieldElement(24, 31)
         c = FieldElement(4, 31)
         self.assertEqual(c, a / b)
+
+class TestPoint(unittest.TestCase):
+    """test class of Point
+    """
+
+    def test_init(self):
+        Point(-1, -1, 5, 7)
+
+    def test_init_errror(self):
+        with self.assertRaises(ValueError):
+            Point(-1, -2, 5, 7)
+
+    def test_equality(self):
+        p1 = Point(-1, -1, 5, 7)
+        p2 = Point(-1, -1, 5, 7)
+        p3 = Point(18, 77, 5, 7)
+        self.assertEqual(p1, p2)
+        self.assertNotEqual(p1, p3)
+
+    def test_add(self):
+        p1 = Point(-1, -1, 5, 7)
+        p2 = Point(-1, 1, 5, 7)
+        inf = Point(None, None, 5, 7)
+        self.assertEqual(p1 + inf, p1)
+        self.assertEqual(inf + p2, p2)
+        self.assertEqual(p1 + p2, inf)
+
+    def test_add_x1_isnot_x2(self):
+        p1 = Point(2, 5, 5, 7)
+        p2 = Point(-1, -1, 5, 7)
+        ans = Point(3, -7, 5, 7)
+        self.assertEqual(p1 + p2, ans)
+
 
 if __name__ == "__main__":
     unittest.main()
