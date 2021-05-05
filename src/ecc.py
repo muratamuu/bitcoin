@@ -1,3 +1,6 @@
+""" 楕円曲線関連モジュール
+"""
+
 import unittest
 
 class FieldElement:
@@ -22,29 +25,29 @@ class FieldElement:
     def __ne__(self, other):
         if other is None:
             return False
-        return not (self == other)
+        return not self == other
 
     def __add__(self, other):
         if other is None:
-            raise ValueError(f'other is None')
+            raise ValueError('other is None')
         if self.prime != other.prime:
-            raise TypeError(f'Cannot add two numbers in different Fields')
+            raise TypeError('Cannot add two numbers in different Fields')
         num = (self.num + other.num) % self.prime
         return self.__class__(num, self.prime)
 
     def __sub__(self, other):
         if other is None:
-            raise ValueError(f'other is None')
+            raise ValueError('other is None')
         if self.prime != other.prime:
-            raise TypeError(f'Cannot subtraction two numbers in different Fields')
+            raise TypeError('Cannot subtraction two numbers in different Fields')
         num = (self.num - other.num) % self.prime
         return self.__class__(num, self.prime)
 
     def __mul__(self, other):
         if other is None:
-            raise ValueError(f'other is None')
+            raise ValueError('other is None')
         if self.prime != other.prime:
-            raise TypeError(f'Cannot multiply two numbers in different Fields')
+            raise TypeError('Cannot multiply two numbers in different Fields')
         num = (self.num * other.num) % self.prime
         return self.__class__(num, self.prime)
 
@@ -55,9 +58,9 @@ class FieldElement:
 
     def __truediv__(self, other):
         if other is None:
-            raise ValueError(f'other is None')
+            raise ValueError('other is None')
         if self.prime != other.prime:
-            raise TypeError(f'Cannot divide two numbers in different Fields')
+            raise TypeError('Cannot divide two numbers in different Fields')
         num = pow(other.num, self.prime - 2, self.prime)
         num = (self.num * num) % self.prime
         return self.__class__(num, self.prime)
@@ -79,15 +82,14 @@ class Point:
     def __repr__(self):
         if self.x is None:
             return 'Point(infinity)'
-        else:
-            return f'Point({self.x},{self.y})_{self.a}_{self.b}'
+        return f'Point({self.x},{self.y})_{self.a}_{self.b}'
 
     def __eq__(self, other):
         return self.x == other.x and self.y == other.y \
                 and self.a == other.a and self.b == other.b
 
     def __ne__(self, other):
-        return not (self == other)
+        return not self == other
 
     def __add__(self, other):
         if self.a != other.a or self.b != other.b:
@@ -107,6 +109,16 @@ class Point:
             x = s ** 2 - self.x - other.x
             y = s * (self.x - x) - self.y
             return self.__class__(x, y, self.a, self.b)
+
+        if self == other and self.y == 0 * self.x:
+            return self.__class__(None, None, self.a, self.b)
+
+        if self == other:
+            s = (3 * self.x ** 2 + self.a) / (2 * self.y)
+            x = s ** 2 - 2 * self.x
+            y = s * (self.x - x) - self.y
+            return self.__class__(x, y, self.a, self.b)
+
 
 class TestFieldElement(unittest.TestCase):
     """test class of FieldElement
@@ -190,6 +202,11 @@ class TestPoint(unittest.TestCase):
         ans = Point(3, -7, 5, 7)
         self.assertEqual(p1 + p2, ans)
 
+    def test_add_p1_and_p2_are_same(self):
+        p1 = Point(-1, -1, 5, 7)
+        p2 = Point(-1, -1, 5, 7)
+        ans = Point(18, 77, 5, 7)
+        self.assertEqual(p1 + p2, ans)
 
 if __name__ == "__main__":
     unittest.main()
