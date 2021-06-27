@@ -4,5 +4,5 @@ import Lib
 import Ecc
 
 main :: IO ()
-main = print $ FieldElement 1 2 == FieldElement 2 3
+main = print $ makeFieldElement 1 2 == makeFieldElement 2 3
 

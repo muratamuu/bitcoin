@@ -1,4 +1,7 @@
-module Ecc where
+module Ecc (
+  FieldElement,
+  makeFieldElement
+) where
 
 data FieldElement = FieldElement Int Int deriving (Eq)
 
