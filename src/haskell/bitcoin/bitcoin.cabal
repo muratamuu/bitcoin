@@ -51,6 +51,7 @@ test-suite bitcoin-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      EccSpec
       Paths_bitcoin
   hs-source-dirs:
       test
@@ -58,4 +59,5 @@ test-suite bitcoin-test
   build-depends:
       base >=4.7 && <5
     , bitcoin
+    , hspec
   default-language: Haskell2010

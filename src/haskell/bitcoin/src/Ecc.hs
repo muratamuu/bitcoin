@@ -1,6 +1,8 @@
 module Ecc (
   FieldElement,
-  makeFieldElement
+  makeFieldElement,
+  (+),
+  (-),
 ) where
 
 import Prelude hiding ((+), (-))
