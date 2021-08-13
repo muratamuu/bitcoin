@@ -170,9 +170,25 @@ class S256Point(Point):
         coef = coefficient % N
         return super().__rmul__(coef)
 
+    def verify(self, z, sig):
+        s_inv = pow(sig.s, N - 2, N)
+        u = z * s_inv % N
+        v = sig.r * s_inv % N
+        total = u * G + v * self
+        return total.x.num == sig.r
+
 G = S256Point(
     0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798,
     0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8)
+
+class Signature:
+
+    def __init__(self, r, s):
+        self.r = r
+        self.s = s
+
+    def __repr__(self):
+        return f'Signature({self.r:x},{self.s:x})'
 
 class TestFieldElement(unittest.TestCase):
     """test class of FieldElement
@@ -315,6 +331,39 @@ class TestEllipticCurve(unittest.TestCase):
                 ans = Point(FieldElement(x2, prime), FieldElement(y2, prime), a, b)
             self.assertEqual(sum, ans)
 
+    def test_s256point_verify(self):
+        z = 0xbc62d4b80d9e36da29c16c5d4d9f11731f36052c72401a76c23c0fb5a9b74423
+        r = 0x37206a0610995c58074999cb9767b87af4c4978db68c06e8e6e81d282047a7c6
+        s = 0x8ca63759c1157ebeaec0d03cecca119fc9a75bf8e6d0fa65c841c8e2738cdaec
+        px = 0x04519fac3d910ca7e7138f7013706f619fa8f033e6ec6e09370ea38cee6a7574
+        py = 0x82b51eab8c27c66e26c858a079bcdf4f1ada34cec420cafc7eac1a42216fb6c4
+        point = S256Point(px, py)
+        s_inv = pow(s, N-2, N)
+        u = z * s_inv % N
+        v = r * s_inv % N
+        self.assertEqual((u*G + v*point).x.num, r)
+
+    def test_s256point_verify_2(self):
+        z = 0xec208baa0fc1c19f708a9ca96fdeff3ac3f230bb4a7ba4aede4942ad003c0f60
+        r = 0xac8d1c87e51d0d441be8b3dd5b05c8795b48875dffe00b7ffcfac23010d3a395
+        s = 0x68342ceff8935ededd102dd876ffd6ba72d6a427a3edb13d26eb0781cb423c4
+        px = 0x887387e452b8eacc4acfde10d9aaf7f6d9a0f975aabb10d006e4da568744d06c
+        py = 0x61de6d95231cd89026e286df3b6ae4a894a3378e393e93a0f45b666329a0ae34
+        point = S256Point(px, py)
+        s_inv = pow(s, N-2, N)
+        u = z * s_inv % N
+        v = r * s_inv % N
+        self.assertEqual((u*G + v*point).x.num, r)
+
+    def test_s256point_verify_3(self):
+        z = 0x7c076ff316692a3d7eb3c3bb0f8b1488cf72e1afcd929e29307032997a838a3d
+        r = 0xeff69ef2b1bd93a66ed5219add4fb51e11a840f404876325a1e8ffe0529a2c
+        s = 0xc7207fee197d27c618aea621406f6bf5ef6fca38681d82b2f06fddbdce6feab6
+        px = 0x887387e452b8eacc4acfde10d9aaf7f6d9a0f975aabb10d006e4da568744d06c
+        py = 0x61de6d95231cd89026e286df3b6ae4a894a3378e393e93a0f45b666329a0ae34
+        point = S256Point(px, py)
+        sig = Signature(r, s)
+        self.assertEqual(point.verify(z, sig), True)
 
 if __name__ == "__main__":
     unittest.main()
