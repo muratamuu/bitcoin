@@ -3,6 +3,9 @@
 """
 
 import unittest
+import hashlib
+import hmac
+from random import randint
 
 class FieldElement:
     """単一の有限体要素
@@ -160,7 +163,7 @@ class S256Point(Point):
         else:
             super().__init__(x=x, y=y, a=a, b=b)
 
-    def __repl__(self):
+    def __repr__(self):
         if self.x is None:
             return 'S256Point(infinity)'
         else:
@@ -189,6 +192,49 @@ class Signature:
 
     def __repr__(self):
         return f'Signature({self.r:x},{self.s:x})'
+
+def hash256(s):
+    '''two rounds of sha256'''
+    return hashlib.sha256(hashlib.sha256(s).digest()).digest()
+
+class PrivateKey:
+
+    def __init__(self, secret):
+        self.secret = secret
+        self.point = secret * G
+
+    def hex(self):
+        return f'{self.secret:064x}'
+
+    def sign(self, z):
+        #k = randint(0, N-1)
+        k = self.deterministic_k(z)
+        r = (k*G).x.num
+        k_inv = pow(k, N-2, N)
+        s = (z + r*self.secret) * k_inv % N
+        if s > N/2:
+            s = N - s
+        return Signature(r, s)
+
+    def deterministic_k(self, z):
+        k = b'\x00' * 32
+        v = b'\x01' * 32
+        if z > N:
+            z -= N
+        z_bytes = z.to_bytes(32, 'big')
+        secret_bytes = self.secret.to_bytes(32, 'big')
+        s256 = hashlib.sha256
+        k = hmac.new(k, v + b'\x00' + secret_bytes + z_bytes, s256).digest()
+        v = hmac.new(k, v, s256).digest()
+        k = hmac.new(k, v + b'\x01' + secret_bytes + z_bytes, s256).digest()
+        v = hmac.new(k, v, s256).digest()
+        while True:
+            v = hmac.new(k, v, s256).digest()
+            candidate = int.from_bytes(v, 'big')
+            if candidate >= 1 and candidate < N:
+                return candidate
+            k = hmac.new(k, v + b'\x00', s256).digest()
+            v = hmac.new(k, v, s256).digest()
 
 class TestFieldElement(unittest.TestCase):
     """test class of FieldElement
@@ -364,6 +410,18 @@ class TestEllipticCurve(unittest.TestCase):
         point = S256Point(px, py)
         sig = Signature(r, s)
         self.assertEqual(point.verify(z, sig), True)
+
+    def test_s256point_signature(self):
+        e = 12345
+        z = int.from_bytes(hash256(b'Programming Bitcoin!'), 'big')
+
+        k = 123456790
+        r = (k*G).x.num
+        k_inv = pow(k, N-2, N)
+        s = (z+r*e) * k_inv % N
+        print(Signature(r, s))
+        point = e*G
+        print(point)
 
 if __name__ == "__main__":
     unittest.main()
