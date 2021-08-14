@@ -73,6 +73,56 @@ class FieldElement:
         num = (self.num * num) % self.prime
         return self.__class__(num, self.prime)
 
+class TestFieldElement(unittest.TestCase):
+    """test class of FieldElement
+    """
+
+    def test_equality(self):
+        a = FieldElement(7, 13)
+        b = FieldElement(7, 13)
+        c = FieldElement(6, 13)
+        self.assertEqual(a, b)
+        self.assertNotEqual(a, c)
+
+    def test_repr(self):
+        a = FieldElement(7, 13)
+        expected = 'FieldElement_13(7)'
+        self.assertEqual(expected, str(a))
+
+    def test_add(self):
+        a = FieldElement(7, 13)
+        b = FieldElement(12, 13)
+        c = FieldElement(6, 13)
+        self.assertEqual(c, a + b)
+
+    def test_sub(self):
+        a = FieldElement(9, 57)
+        b = FieldElement(29, 57)
+        c = FieldElement(37, 57)
+        self.assertEqual(c, a - b)
+
+    def test_mul(self):
+        a = FieldElement(95, 97)
+        b = FieldElement(45, 97)
+        c = FieldElement(7, 97)
+        self.assertEqual(c, a * b)
+
+    def test_pow(self):
+        a = FieldElement(3, 13)
+        b = FieldElement(1, 13)
+        self.assertEqual(b, a ** 3)
+
+    def test_neg_pow(self):
+        a = FieldElement(7, 13)
+        b = FieldElement(8, 13)
+        self.assertEqual(b, a ** -3)
+
+    def test_div(self):
+        a = FieldElement(3, 31)
+        b = FieldElement(24, 31)
+        c = FieldElement(4, 31)
+        self.assertEqual(c, a / b)
+
 class Point:
     """楕円曲線上の点
     """
@@ -141,6 +191,44 @@ class Point:
             coef >>= 1
         return result
 
+class TestPoint(unittest.TestCase):
+    """test class of Point
+    """
+
+    def test_init(self):
+        Point(-1, -1, 5, 7)
+
+    def test_init_errror(self):
+        with self.assertRaises(ValueError):
+            Point(-1, -2, 5, 7)
+
+    def test_equality(self):
+        p1 = Point(-1, -1, 5, 7)
+        p2 = Point(-1, -1, 5, 7)
+        p3 = Point(18, 77, 5, 7)
+        self.assertEqual(p1, p2)
+        self.assertNotEqual(p1, p3)
+
+    def test_add(self):
+        p1 = Point(-1, -1, 5, 7)
+        p2 = Point(-1, 1, 5, 7)
+        inf = Point(None, None, 5, 7)
+        self.assertEqual(p1 + inf, p1)
+        self.assertEqual(inf + p2, p2)
+        self.assertEqual(p1 + p2, inf)
+
+    def test_add_x1_isnot_x2(self):
+        p1 = Point(2, 5, 5, 7)
+        p2 = Point(-1, -1, 5, 7)
+        ans = Point(3, -7, 5, 7)
+        self.assertEqual(p1 + p2, ans)
+
+    def test_add_p1_and_p2_are_same(self):
+        p1 = Point(-1, -1, 5, 7)
+        p2 = Point(-1, -1, 5, 7)
+        ans = Point(18, 77, 5, 7)
+        self.assertEqual(p1 + p2, ans)
+
 P = 2 ** 256 - 2 ** 32 - 977
 A = 0
 B = 7
@@ -183,146 +271,6 @@ class S256Point(Point):
 G = S256Point(
     0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798,
     0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8)
-
-class Signature:
-
-    def __init__(self, r, s):
-        self.r = r
-        self.s = s
-
-    def __repr__(self):
-        return f'Signature({self.r:x},{self.s:x})'
-
-def hash256(s):
-    '''two rounds of sha256'''
-    return hashlib.sha256(hashlib.sha256(s).digest()).digest()
-
-class PrivateKey:
-
-    def __init__(self, secret):
-        self.secret = secret
-        self.point = secret * G
-
-    def hex(self):
-        return f'{self.secret:064x}'
-
-    def sign(self, z):
-        #k = randint(0, N-1)
-        k = self.deterministic_k(z)
-        r = (k*G).x.num
-        k_inv = pow(k, N-2, N)
-        s = (z + r*self.secret) * k_inv % N
-        if s > N/2:
-            s = N - s
-        return Signature(r, s)
-
-    def deterministic_k(self, z):
-        k = b'\x00' * 32
-        v = b'\x01' * 32
-        if z > N:
-            z -= N
-        z_bytes = z.to_bytes(32, 'big')
-        secret_bytes = self.secret.to_bytes(32, 'big')
-        s256 = hashlib.sha256
-        k = hmac.new(k, v + b'\x00' + secret_bytes + z_bytes, s256).digest()
-        v = hmac.new(k, v, s256).digest()
-        k = hmac.new(k, v + b'\x01' + secret_bytes + z_bytes, s256).digest()
-        v = hmac.new(k, v, s256).digest()
-        while True:
-            v = hmac.new(k, v, s256).digest()
-            candidate = int.from_bytes(v, 'big')
-            if candidate >= 1 and candidate < N:
-                return candidate
-            k = hmac.new(k, v + b'\x00', s256).digest()
-            v = hmac.new(k, v, s256).digest()
-
-class TestFieldElement(unittest.TestCase):
-    """test class of FieldElement
-    """
-
-    def test_equality(self):
-        a = FieldElement(7, 13)
-        b = FieldElement(7, 13)
-        c = FieldElement(6, 13)
-        self.assertEqual(a, b)
-        self.assertNotEqual(a, c)
-
-    def test_repr(self):
-        a = FieldElement(7, 13)
-        expected = 'FieldElement_13(7)'
-        self.assertEqual(expected, str(a))
-
-    def test_add(self):
-        a = FieldElement(7, 13)
-        b = FieldElement(12, 13)
-        c = FieldElement(6, 13)
-        self.assertEqual(c, a + b)
-
-    def test_sub(self):
-        a = FieldElement(9, 57)
-        b = FieldElement(29, 57)
-        c = FieldElement(37, 57)
-        self.assertEqual(c, a - b)
-
-    def test_mul(self):
-        a = FieldElement(95, 97)
-        b = FieldElement(45, 97)
-        c = FieldElement(7, 97)
-        self.assertEqual(c, a * b)
-
-    def test_pow(self):
-        a = FieldElement(3, 13)
-        b = FieldElement(1, 13)
-        self.assertEqual(b, a ** 3)
-
-    def test_neg_pow(self):
-        a = FieldElement(7, 13)
-        b = FieldElement(8, 13)
-        self.assertEqual(b, a ** -3)
-
-    def test_div(self):
-        a = FieldElement(3, 31)
-        b = FieldElement(24, 31)
-        c = FieldElement(4, 31)
-        self.assertEqual(c, a / b)
-
-class TestPoint(unittest.TestCase):
-    """test class of Point
-    """
-
-    def test_init(self):
-        Point(-1, -1, 5, 7)
-
-    def test_init_errror(self):
-        with self.assertRaises(ValueError):
-            Point(-1, -2, 5, 7)
-
-    def test_equality(self):
-        p1 = Point(-1, -1, 5, 7)
-        p2 = Point(-1, -1, 5, 7)
-        p3 = Point(18, 77, 5, 7)
-        self.assertEqual(p1, p2)
-        self.assertNotEqual(p1, p3)
-
-    def test_add(self):
-        p1 = Point(-1, -1, 5, 7)
-        p2 = Point(-1, 1, 5, 7)
-        inf = Point(None, None, 5, 7)
-        self.assertEqual(p1 + inf, p1)
-        self.assertEqual(inf + p2, p2)
-        self.assertEqual(p1 + p2, inf)
-
-    def test_add_x1_isnot_x2(self):
-        p1 = Point(2, 5, 5, 7)
-        p2 = Point(-1, -1, 5, 7)
-        ans = Point(3, -7, 5, 7)
-        self.assertEqual(p1 + p2, ans)
-
-    def test_add_p1_and_p2_are_same(self):
-        p1 = Point(-1, -1, 5, 7)
-        p2 = Point(-1, -1, 5, 7)
-        ans = Point(18, 77, 5, 7)
-        self.assertEqual(p1 + p2, ans)
 
 class TestEllipticCurve(unittest.TestCase):
     """test class of Point with FieldElement
@@ -419,9 +367,60 @@ class TestEllipticCurve(unittest.TestCase):
         r = (k*G).x.num
         k_inv = pow(k, N-2, N)
         s = (z+r*e) * k_inv % N
-        print(Signature(r, s))
         point = e*G
-        print(point)
+        #print(point)
+
+class Signature:
+
+    def __init__(self, r, s):
+        self.r = r
+        self.s = s
+
+    def __repr__(self):
+        return f'Signature({self.r:x},{self.s:x})'
+
+def hash256(s):
+    '''two rounds of sha256'''
+    return hashlib.sha256(hashlib.sha256(s).digest()).digest()
+
+class PrivateKey:
+
+    def __init__(self, secret):
+        self.secret = secret
+        self.point = secret * G
+
+    def hex(self):
+        return f'{self.secret:064x}'
+
+    def sign(self, z):
+        #k = randint(0, N-1)
+        k = self.deterministic_k(z)
+        r = (k*G).x.num
+        k_inv = pow(k, N-2, N)
+        s = (z + r*self.secret) * k_inv % N
+        if s > N/2:
+            s = N - s
+        return Signature(r, s)
+
+    def deterministic_k(self, z):
+        k = b'\x00' * 32
+        v = b'\x01' * 32
+        if z > N:
+            z -= N
+        z_bytes = z.to_bytes(32, 'big')
+        secret_bytes = self.secret.to_bytes(32, 'big')
+        s256 = hashlib.sha256
+        k = hmac.new(k, v + b'\x00' + secret_bytes + z_bytes, s256).digest()
+        v = hmac.new(k, v, s256).digest()
+        k = hmac.new(k, v + b'\x01' + secret_bytes + z_bytes, s256).digest()
+        v = hmac.new(k, v, s256).digest()
+        while True:
+            v = hmac.new(k, v, s256).digest()
+            candidate = int.from_bytes(v, 'big')
+            if candidate >= 1 and candidate < N:
+                return candidate
+            k = hmac.new(k, v + b'\x00', s256).digest()
+            v = hmac.new(k, v, s256).digest()
 
 if __name__ == "__main__":
     unittest.main()
