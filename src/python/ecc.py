@@ -240,7 +240,10 @@ class S256Field(FieldElement):
         super().__init__(num=num, prime=P)
 
     def __repr__(self):
-        return '{:x}'.format(self.num).zfill(64)
+        return f'{self.num:064x}'
+
+    def sqrt(self):
+        return self**((P + 1) // 4)
 
 class S256Point(Point):
 
@@ -268,11 +271,46 @@ class S256Point(Point):
         total = u * G + v * self
         return total.x.num == sig.r
 
+    def sec(self, compressed=True):
+        '''SECフォーマットをバイナリ形式にて返す'''
+        if compressed:
+            if self.y.num % 2 == 0:
+                return b'\x02' + self.x.num.to_bytes(32, 'big')
+            else:
+                return b'\x03' + self.x.num.to_bytes(32, 'big')
+        else:
+            return b'\x04' + self.x.num.to_bytes(32, 'big') + \
+                self.y.num.to_bytes(32, 'big')
+
+    @classmethod
+    def parse(self, sec_bin):
+        '''SECバイナリ(16進数ではない)からPointオブジェクトを返す'''
+        if sec_bin[0] == 4:
+            x = int.from_bytes(sec_bin[1:33], 'big')
+            y = int.from_bytes(sec_bin[33:65], 'big')
+            return S256Point(x=x, y=y)
+        is_even = sec_bin[0] == 2
+        x = S256Field(int.from_bytes(sec_bin[1:], 'big'))
+        # 式 y^2 = x^3 + 7 の右辺
+        alpha = x**3 + S256Field(B)
+        # 左辺を解く
+        beta = alpha.sqrt()
+        if beta.num % 2 == 0:
+            even_beta = beta
+            odd_beta = S256Field(P - beta.num)
+        else:
+            even_beta = S256Field(P - beta.num)
+            odd_beta = beta
+        if is_even:
+            return S256Point(x, even_beta)
+        else:
+            return S256Point(x, odd_beta)
+
 G = S256Point(
     0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798,
     0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8)
 
-class TestEllipticCurve(unittest.TestCase):
+class TestS256Point(unittest.TestCase):
     """test class of Point with FieldElement
     """
 
@@ -421,6 +459,13 @@ class PrivateKey:
                 return candidate
             k = hmac.new(k, v + b'\x00', s256).digest()
             v = hmac.new(k, v, s256).digest()
+
+class TestPrivateKey(unittest.TestCase):
+
+    def test_to_sec_format(self):
+        key = PrivateKey(0xdeadbeef12345)
+        #print(key.point.sec())
+
 
 if __name__ == "__main__":
     unittest.main()
