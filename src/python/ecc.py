@@ -417,6 +417,32 @@ class Signature:
     def __repr__(self):
         return f'Signature({self.r:x},{self.s:x})'
 
+    def der(self):
+        rbin = self.r.to_bytes(32, byteorder='big')
+        # 先頭のnullバイトを全て取り除く
+        rbin = rbin.lstrip(b'\x00')
+        # rbinの最上位ビットが1の場合、\x00を追加する
+        if rbin[0] & 0x80:
+            rbin = b'\x00' + rbin
+        result = bytes([2, len(rbin)]) + rbin
+        sbin = self.s.to_bytes(32, byteorder='big')
+        # 先頭のnullバイトを全て取り除く
+        sbin = sbin.lstrip(b'\x00')
+        # sbinの最上位ビットが1の場合、\x00を追加する
+        if sbin[0] & 0x80:
+            sbin = b'\x00' + sbin
+        result += bytes([2, len(sbin)]) + sbin
+        return bytes([0x30, len(result)]) + result
+
+class TestSignature(unittest.TestCase):
+
+    def test_der(self):
+        r = 0x37206a0610995c58074999cb9767b87af4c4978db68c06e8e6e81d282047a7c6
+        s = 0x8ca63759c1157ebeaec0d03cecca119fc9a75bf8e6d0fa65c841c8e2738cdaec
+
+        sig = Signature(r=r, s=s)
+        #print(sig.der().hex())
+
 def hash256(s):
     '''two rounds of sha256'''
     return hashlib.sha256(hashlib.sha256(s).digest()).digest()
