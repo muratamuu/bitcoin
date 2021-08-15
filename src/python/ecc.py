@@ -499,6 +499,18 @@ class PrivateKey:
             k = hmac.new(k, v + b'\x00', s256).digest()
             v = hmac.new(k, v, s256).digest()
 
+    def wif(self, compressed=True, testnet=False):
+        secret_bytes = self.secret.to_bytes(32, 'big')
+        if testnet:
+            prefix = b'\xef'
+        else:
+            prefix = b'\x80'
+        if compressed:
+            suffix = b'\x01'
+        else:
+            suffix = b''
+        return encode_base58_checksum(prefix + secret_bytes + suffix)
+
 class TestPrivateKey(unittest.TestCase):
 
     def test_to_sec_format(self):
@@ -519,6 +531,21 @@ class TestPrivateKey(unittest.TestCase):
         key = PrivateKey(0x12345deadbeef)
         address = key.point.address()
         self.assertEqual(address, '1F1Pn2y6pDb68E5nYJJeba4TLg2U7B6KF1')
+
+    def test_wif_1(self):
+        key = PrivateKey(5003)
+        wif = key.wif(testnet=True)
+        self.assertEqual(wif, 'cMahea7zqjxrtgAbB7LSGbcQUr1uX1ojuat9jZodMN8rFTv2sfUK')
+
+    def test_wif_2(self):
+        key = PrivateKey(2021 ** 5)
+        wif = key.wif(compressed=False, testnet=True)
+        self.assertEqual(wif, '91avARGdfge8E4tZfYLoxeJ5sGBdNJQH4kvjpWAxgzczjbCwxic')
+
+    def test_wif_3(self):
+        key = PrivateKey(0x54321deadbeef)
+        wif = key.wif()
+        self.assertEqual(wif, 'KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgiuQJv1h8Ytr2S53a')
 
 BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
