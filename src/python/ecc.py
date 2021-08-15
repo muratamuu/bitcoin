@@ -6,6 +6,7 @@ import unittest
 import hashlib
 import hmac
 from random import randint
+from helper import hash160
 
 class FieldElement:
     """単一の有限体要素
@@ -306,6 +307,18 @@ class S256Point(Point):
         else:
             return S256Point(x, odd_beta)
 
+    def hash160(self, compressed=True):
+        return hash160(self.sec(compressed))
+
+    def address(self, compressed=True, testnet=False):
+        '''アドレスの文字列を返す'''
+        h160 = self.hash160(compressed)
+        if testnet:
+            prefix = b'\x6f'
+        else:
+            prefix = b'\x00'
+        return encode_base58_checksum(prefix + h160)
+
 G = S256Point(
     0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798,
     0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8)
@@ -492,6 +505,57 @@ class TestPrivateKey(unittest.TestCase):
         key = PrivateKey(0xdeadbeef12345)
         #print(key.point.sec())
 
+    def test_address_1(self):
+        key = PrivateKey(5002)
+        address = key.point.address(compressed=False, testnet=True)
+        self.assertEqual(address, 'mmTPbXQFxboEtNRkwfh6K51jvdtHLxGeMA')
+
+    def test_address_2(self):
+        key = PrivateKey(2020 ** 5)
+        address = key.point.address(testnet=True)
+        self.assertEqual(address, 'mopVkxp8UhXqRYbCYJsbeE1h1fiF64jcoH')
+
+    def test_address_3(self):
+        key = PrivateKey(0x12345deadbeef)
+        address = key.point.address()
+        self.assertEqual(address, '1F1Pn2y6pDb68E5nYJJeba4TLg2U7B6KF1')
+
+BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+
+def encode_base58(s):
+    count = 0
+    for c in s:
+        if c == 0:
+            count += 1
+        else:
+            break
+    num = int.from_bytes(s, 'big')
+    prefix = '1' * count
+    result = ''
+    while num > 0:
+        num, mod = divmod(num, 58)
+        result = BASE58_ALPHABET[mod] + result
+    return prefix + result
+
+def encode_base58_checksum(b):
+    return encode_base58(b + hash256(b)[:4])
+
+class TestEncode(unittest.TestCase):
+
+    def test_encode1(self):
+        v = 0x7c076ff316692a3d7eb3c3bb0f8b1488cf72e1afcd929e29307032997a838a3d
+        b = v.to_bytes(32, 'big')
+        #print(encode_base58(b))
+
+    def test_encode2(self):
+        v = 0xeff69ef2b1bd93a66ed5219add4fb51e11a840f404876325a1e8ffe0529a2c
+        b = v.to_bytes(31, 'big')
+        #print(encode_base58(b))
+
+    def test_encode3(self):
+        v = 0xc7207fee197d27c618aea621406f6bf5ef6fca38681d82b2f06fddbdce6feab6
+        b = v.to_bytes(32, 'big')
+        #print(encode_base58(b))
 
 if __name__ == "__main__":
     unittest.main()
