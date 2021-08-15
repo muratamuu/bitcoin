@@ -547,6 +547,12 @@ class TestPrivateKey(unittest.TestCase):
         wif = key.wif()
         self.assertEqual(wif, 'KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgiuQJv1h8Ytr2S53a')
 
+    def test_my_address(self):
+        passphrase = b'aaa'
+        secret = little_endian_to_int(hash256(passphrase))
+        priv = PrivateKey(secret)
+        print(priv.point.address(testnet=True))
+
 BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
 def encode_base58(s):
@@ -583,6 +589,12 @@ class TestEncode(unittest.TestCase):
         v = 0xc7207fee197d27c618aea621406f6bf5ef6fca38681d82b2f06fddbdce6feab6
         b = v.to_bytes(32, 'big')
         #print(encode_base58(b))
+
+def little_endian_to_int(b):
+    return int.from_bytes(b, 'little')
+
+def int_to_little_endian(i, length):
+    return i.to_bytes(length, 'little')
 
 if __name__ == "__main__":
     unittest.main()
