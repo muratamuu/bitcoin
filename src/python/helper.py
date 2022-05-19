@@ -56,5 +56,34 @@ def little_endian_to_int(b):
 def int_to_little_endian(i, length):
     return i.to_bytes(length, 'little')
 
+def read_variant(s):
+    '''read_variantはストリームから可変長の整数を読み取る'''
+    i = s.read(1)[0]
+    if i == 0xfd:
+        # 0xfdは次の2バイトが数値であることを意味する
+        return little_endian_to_int(s.read(2))
+    elif i == 0xfe:
+        # 0xfeは次の4バイトが数値であることを意味する
+        return little_endian_to_int(s.read(4))
+    elif i == 0xff:
+        # 0xffは次の8バイトが数値であることを意味する
+        return little_endian_to_int(s.read(8))
+    else:
+        # その他は単なる整数
+        return i
+
+def encode_variant(i):
+    '''整数をvariantとしてエンコードする'''
+    if i < 0xfd:
+        return bytes([i])
+    elif i < 0x10000:
+        return b'\xfd' + int_to_little_endian(i, 2)
+    elif i < 0x100000000:
+        return b'\xfe' + int_to_little_endian(i, 4)
+    elif i < 0x10000000000000000:
+        return b'\xff' + int_to_little_endian(i, 8)
+    else:
+        raise ValueError(f'integer too large: {i}')
+
 if __name__ == "__main__":
     unittest.main()
